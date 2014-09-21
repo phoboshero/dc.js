@@ -19,7 +19,7 @@ dc.stackMixin = function (_chart) {
         layer.name = String(layer.name || layerIdx);
         layer.values = layer.group.all().map(function(d,i) {
             return {x: _chart.keyAccessor()(d,i),
-                    y: layer.hidden ? null : valAccessor(d,i),
+                    y: layer.hidden ? null : valAccessor(d,layerIdx),
                     data: d,
                     layer: layer.name,
                     hidden: layer.hidden};

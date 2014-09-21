@@ -63,6 +63,19 @@ dc.baseMixin = function (_chart) {
 
     var _legend;
 
+    // external event handler
+    var _eventHandlers = {};
+    _chart.addHandlers = function(eventName, callback) {
+        if (arguments.length == 2)
+            _eventHandlers[eventName] = callback;
+        return _chart;
+    };
+    _chart.addDataChangeHandler = function(callback) {
+        if (arguments.length)
+            _eventHandlers.onDataChange = callback;
+        return _chart;
+    };
+
     var _filters = [];
     var _filterHandler = function (dimension, filters) {
         dimension.filter(null);
@@ -612,6 +625,9 @@ dc.baseMixin = function (_chart) {
         dc.events.trigger(function () {
             _chart.filter(filter);
             _chart.redrawGroup();
+            // add new handler to trigger external events
+            if (typeof _eventHandlers.onDataChange === "function")
+                _eventHandlers.onDataChange(_dimension.top(Infinity));
         });
     };
 

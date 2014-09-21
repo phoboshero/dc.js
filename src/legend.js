@@ -23,7 +23,8 @@ dc.legend = function () {
         _gap = 5,
         _horizontal = false,
         _legendWidth = 560,
-        _itemWidth = 70;
+        _itemWidth = 70,
+        _handlers = {};
 
     var _g;
 
@@ -53,6 +54,9 @@ dc.legend = function () {
             })
             .on("click", function (d) {
                 d.chart.legendToggle(d);
+                // add additional listener
+                if (typeof _handlers.onClick === "function")
+                    _handlers.onClick(d);
             });
 
         _g.selectAll('g.dc-legend-item')
@@ -173,6 +177,19 @@ dc.legend = function () {
     _legend.itemWidth = function(_) {
         if (!arguments.length) return _itemWidth;
         _itemWidth = _;
+        return _legend;
+    };
+
+    /**
+    #### .addHandler({name, callback})
+    add to _handlers, e.g. {"onClick", function(param){}}
+    **/
+    _legend.addHandler = function(_) {
+        if (_) {
+            for(var funcName in _) {
+                _handlers[funcName] = _[funcName];
+            }
+        }
         return _legend;
     };
 
