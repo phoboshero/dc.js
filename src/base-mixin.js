@@ -103,6 +103,15 @@ dc.baseMixin = function (_chart) {
     };
 
     /**
+     * handle injected event to fire data change handler on chart level
+     */
+    _chart.onDataChange = function () {
+        // add data change handler to trigger external events
+        if (typeof _eventHandlers.onDataChange === "function")
+            _eventHandlers.onDataChange(_dimension.top(Infinity));
+    };
+
+    /**
     #### .width([value])
     Set or get the width attribute of a chart. See `.height` below for further description of the
     behavior.

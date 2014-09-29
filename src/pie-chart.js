@@ -84,6 +84,18 @@ dc.pieChart = function (parent, chartGroup) {
             .append("g")
             .attr("transform", "translate(" + _chart.cx() + "," + _chart.cy() + ")");
 
+        // add center
+        var centerClick = function(){
+            // console.log("center clicked");
+            _chart.filter(null);
+            _chart.redrawGroup();
+            _chart.onDataChange();
+        };
+        var centerCircle = _g.append("circle").classed('pie-center', true)
+            .attr("r", _innerRadius)
+            .style("fill", "white")
+            .on('click', centerClick);
+
         drawChart();
 
         return _chart;
