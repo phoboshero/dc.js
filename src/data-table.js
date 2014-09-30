@@ -29,9 +29,12 @@ dc.dataTable = function(parent, chartGroup) {
     var ROW_CSS_CLASS = "dc-table-row";
     var COLUMN_CSS_CLASS = "dc-table-column";
     var GROUP_CSS_CLASS = "dc-table-group";
+    var HEAD_CSS_CLASS = "dc-table-head";
+    var TD_CLICKED_CLASS = "dc-table-td-clicked";
 
     var _chart = dc.baseMixin({});
 
+    var _isShowGroup = true;
     var _size = 25;
     var _columns = [];
     var _sortBy = function(d) {
@@ -39,7 +42,10 @@ dc.dataTable = function(parent, chartGroup) {
     };
     var _order = d3.ascending;
 
+    var _onCategoryClick = function(data){};
+
     _chart._doRender = function() {
+        _chart.selectAll("thead").remove();
         _chart.selectAll("tbody").remove();
 
         renderRows(renderGroups());
@@ -48,6 +54,28 @@ dc.dataTable = function(parent, chartGroup) {
     };
 
     function renderGroups() {
+        // inject thead
+        var tHead = _chart.root().append("thead")
+            .attr("class", HEAD_CSS_CLASS)
+            .style("width", _chart.width());
+        var headTh = tHead.selectAll("th")
+            .data(_columns);
+
+        // calc agg width
+        var aggWidth = 0;
+        _columns.forEach(function(columnOption,i) {
+            aggWidth += columnOption.width || 100;
+        });
+
+        headTh.enter()
+            .append("th")
+            .style("width", function(d){
+                var sizeInPcnt = (d.width || 100) / aggWidth;
+                var actualSize = Math.floor(sizeInPcnt * _chart.width());
+                return actualSize + "px";
+            })
+            .html(function(d){return d.title || d.key;});
+
         var groups = _chart.root().selectAll("tbody")
             .data(nestEntries(), function(d) {
                 return _chart.keyAccessor()(d);
@@ -55,17 +83,23 @@ dc.dataTable = function(parent, chartGroup) {
 
         var rowGroup = groups
             .enter()
-            .append("tbody");
+            .append("tbody")
+            .style("width", _chart.width());
 
-        rowGroup
+
+        var rowGroupTr = rowGroup
             .append("tr")
-            .attr("class", GROUP_CSS_CLASS)
-                .append("td")
-                .attr("class", LABEL_CSS_CLASS)
-                .attr("colspan", _columns.length)
-                .html(function(d) {
-                    return _chart.keyAccessor()(d);
-                });
+            .attr("class", GROUP_CSS_CLASS);
+        if (!_isShowGroup) {
+            rowGroupTr.style("display", "none");
+        }
+
+        rowGroupTr.append("td")
+            .attr("class", LABEL_CSS_CLASS)
+            .attr("colspan", _columns.length)
+            .html(function(d) {
+                return _chart.keyAccessor()(d);
+            });
 
         groups.exit().remove();
 
@@ -94,10 +128,59 @@ dc.dataTable = function(parent, chartGroup) {
             .append("tr")
             .attr("class", ROW_CSS_CLASS);
 
-        _columns.forEach(function(f,i) {
-            rowEnter.append("td")
-                .attr("class", COLUMN_CSS_CLASS + " _" + i)
-                .html(f);
+        // calc agg width
+        var aggWidth = 0;
+        _columns.forEach(function(columnOption,i) {
+            aggWidth += columnOption.width || 100;
+        });
+
+        _columns.forEach(function(columnOption,i) {
+            var sizeInPcnt = (columnOption.width || 100) / aggWidth;
+            var actualSize = Math.floor(sizeInPcnt * _chart.width());
+            var rowTd = rowEnter.append("td");
+            rowTd.attr("class", COLUMN_CSS_CLASS + " _" + i)
+                .style("width", actualSize + "px")
+                .html(function(d){
+                    // inject formatter
+                    var cellValue = d[columnOption.key];
+                    var cellFormat;
+                    if (columnOption.dataType && columnOption.dataType == "date") {
+                        cellFormat = d3.time.format(columnOption.dataFormat || "%B %d, %Y %H:%M");
+                        return cellFormat(cellValue);
+                    } else if (columnOption.dataType && columnOption.dataType == "number" && columnOption.dataFormat) {
+                        cellFormat = d3.format(columnOption.dataFormat);
+                        return cellFormat(cellValue);
+                    }
+                    return cellValue;
+                });
+            if (columnOption.type && columnOption.type == 'c') {
+                rowTd.classed("category", true);
+                rowTd.on("click", function(d){
+//                    console.log("td cliked");
+//                    console.log(d3.select(this));
+                    var clickedCell = d3.select(this);
+                    var clickedRow = d3.select(this.parentNode);
+
+                    // clear all click style
+                    var pTable = d3.select(this.parentNode.parentNode.parentNode);
+                    pTable.selectAll("." + TD_CLICKED_CLASS).classed(TD_CLICKED_CLASS, false);
+
+                    // apply cell style
+                    var allClass = clickedCell.attr('class').split(" ");
+                    if (allClass.indexOf(TD_CLICKED_CLASS) < 0) {
+                        // not clicked
+                        clickedCell.classed(TD_CLICKED_CLASS, true);
+                        clickedRow.classed(TD_CLICKED_CLASS, true);
+                        columnOption._isApply = true;
+                    } else {
+                        clickedCell.classed(TD_CLICKED_CLASS, false);
+                        clickedRow.classed(TD_CLICKED_CLASS, false);
+                        columnOption._isApply = false;
+                    }
+
+                    _onCategoryClick(d, columnOption, _chart.dimension().top(Infinity));
+                });
+            }
         });
 
         rows.exit().remove();
@@ -107,6 +190,22 @@ dc.dataTable = function(parent, chartGroup) {
 
     _chart._doRedraw = function() {
         return _chart._doRender();
+    };
+
+    /**
+    #### .showGroup(boolean)
+    set to show or hide group row
+    **/
+    _chart.showGroup = function(isShow) {
+        if (!arguments.length) return _isShowGroup;
+        _isShowGroup = isShow;
+        return _chart;
+    };
+
+    _chart.setCategoryClick = function(f) {
+        if (!arguments.length) return _chart;
+        _onCategoryClick = f;
+        return _chart;
     };
 
     /**

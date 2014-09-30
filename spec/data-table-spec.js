@@ -25,13 +25,10 @@ describe('dc.dataTable', function() {
             .size(3)
             .sortBy(function(d){return d.id;})
             .order(d3.descending)
-            .columns(
-                [function(d) {
-                    return d.id;
-                }, function(d) {
-                    return d.status;
-                }]
-            );
+            .columns([
+                {key: 'id', width: 100},
+                {key: 'status', width: 100}
+            ]);
         chart.render();
     });
 
