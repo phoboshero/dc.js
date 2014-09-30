@@ -146,6 +146,8 @@ dc.dataTable = function(parent, chartGroup) {
                     var cellFormat;
                     if (columnOption.dataType && columnOption.dataType == "date") {
                         cellFormat = d3.time.format(columnOption.dataFormat || "%B %d, %Y %H:%M");
+                        if (columnOption.needTranslate)
+                            cellValue = new Date(cellValue * 1000);
                         return cellFormat(cellValue);
                     } else if (columnOption.dataType && columnOption.dataType == "number" && columnOption.dataFormat) {
                         cellFormat = d3.format(columnOption.dataFormat);
