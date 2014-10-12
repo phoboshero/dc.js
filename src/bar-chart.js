@@ -94,6 +94,13 @@ dc.barChart = function (parent, chartGroup) {
 //        console.log(d);
         for (var i = 0; i < d.values.length; i++) {
             d.values[i].options = d.options;
+            // check data applicable or not
+            var valuePresent = d.values[i].data.value.totalCount;
+            if (typeof valuePresent != "number")
+                valuePresent = 1;
+            // if data not applicable, change y value to 0 instead of "expand" stack layout %
+            if (valuePresent <= 0)
+                d.values[i].y = 0;
         }
 
         var bars = layer.selectAll("rect.bar")
