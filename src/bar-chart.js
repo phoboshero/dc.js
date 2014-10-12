@@ -65,6 +65,9 @@ dc.barChart = function (parent, chartGroup) {
         var layers = _chart.chartBodyG().selectAll("g.stack")
             .data(_chart.data());
 
+//        console.log("chart data");
+//        console.log(_chart.data());
+//        console.log(layers);
         calculateBarWidth();
 
         layers
@@ -86,14 +89,84 @@ dc.barChart = function (parent, chartGroup) {
     }
 
     function renderBars(layer, layerIndex, d) {
+        // assign value options to each data
+//        console.log("render bar");
+//        console.log(d);
+        for (var i = 0; i < d.values.length; i++) {
+            d.values[i].options = d.options;
+        }
+
         var bars = layer.selectAll("rect.bar")
             .data(d.values, dc.pluck('x'));
 
-        var enter = bars.enter()
-            .append("rect")
+
+        var enter = bars.enter();
+        var barRect = enter.append("rect")
             .attr("class", "bar")
-            .attr("fill", dc.pluck('data',_chart.getColor))
-            .attr("height", 0);
+            .attr("height", 0)
+            .attr("x", function (d) {
+                var x = _chart.x()(d.x);
+                if (_centerBar) x -= _barWidth / 2;
+                if (_chart.isOrdinal() && _gap!==undefined) x += _gap/2;
+                return dc.utils.safeNumber(x);
+            });
+//            .attr("y", function (d) {
+//                var y = _chart.y()(d.y + d.y0);
+//
+//                if (d.y < 0)
+//                    y -= barHeight(d);
+//
+//                return dc.utils.safeNumber(y);
+//            })
+//            .attr("width", _barWidth)
+//            .attr("height", function (d) {
+//                return barHeight(d);
+//            });
+//            .attr("fill", dc.pluck('data',_chart.getColor));
+
+        // add text if set to true
+        if (d.options.showText) {
+            enter.append("text")
+                .attr("class", "bar-value")
+                .attr("x", function (d) {
+                    var x = _chart.x()(d.x);
+                    if (_centerBar) x -= _barWidth / 2;
+                    if (_chart.isOrdinal() && _gap!==undefined) x += _gap/2;
+                    var safeX = dc.utils.safeNumber(x);
+                    return safeX - 5;
+                })
+                .attr("y", function (d) {
+                    var y = _chart.y()(d.y + d.y0);
+                    var barH = barHeight(d);
+                    if (d.y < 0)
+                        y -= barH;
+                    var safeY = dc.utils.safeNumber(y);
+                    return safeY + barH / 2;
+                })
+//                .attr("width", _barWidth)
+//                .attr("height", function (d) {
+//                    return barHeight(d);
+//                })
+                .attr("fill", "black")
+                .text(function(d){
+    //                console.log(d);
+                    var textFormat = d.options.isPcnt ? d3.format(",.2%") : d3.format(".2f");
+                    return textFormat(d.y);
+                });
+        }// end of text
+
+        var colorSet = false;
+        barRect.attr("fill", function(d){
+//            console.log("set color");
+//            console.log(d);
+            if (d.options.color) {
+                colorSet = true;
+                return d.options.color;
+            }
+        });
+//        console.log("set old color");
+        if (!colorSet)
+            barRect.attr("fill", dc.pluck('data',_chart.getColor));
 
         if (_chart.renderTitle())
             enter.append("title").text(dc.pluck('data',_chart.title(d.name)));
@@ -101,7 +174,44 @@ dc.barChart = function (parent, chartGroup) {
         if (_chart.isOrdinal())
             bars.on("click", onClick);
 
-        dc.transition(bars, _chart.transitionDuration())
+        if (d.options.showText) {
+            var barTexts = layer.selectAll("text.bar-value")
+                .data(d.values, dc.pluck('x'));
+//            console.log(barTexts);
+            dc.transition(barTexts, _chart.transitionDuration())
+                .attr("x", function (d) {
+                    var x = _chart.x()(d.x);
+                    if (_centerBar) x -= _barWidth / 2;
+                    if (_chart.isOrdinal() && _gap!==undefined) x += _gap/2;
+                    var safeX = dc.utils.safeNumber(x);
+                    return safeX - 5;
+                })
+                .attr("y", function (d) {
+                    var y = _chart.y()(d.y + d.y0);
+                    var barH = barHeight(d);
+                    if (d.y < 0)
+                        y -= barH;
+                    var safeY = dc.utils.safeNumber(y);
+//                    console.log("bar H");
+//                    console.log(barH);
+//                    console.log(safeY);
+                    return safeY + barH / 2;
+                })
+                .text(function(d){
+    //                console.log(d);
+                    if (d.y < 0.00001) return "";
+                    var textFormat = d.options.isPcnt ? d3.format(d.options.textFormat || ",.2%")
+                        : d3.format(d.options.textFormat || ".2f");
+                    return textFormat(d.y);
+                });
+
+            barTexts.exit()
+                .text("")
+                .remove();
+        }
+
+        var barsPure = layer.selectAll("rect.bar");
+        dc.transition(barsPure, _chart.transitionDuration())
             .attr("x", function (d) {
                 var x = _chart.x()(d.x);
                 if (_centerBar) x -= _barWidth / 2;
@@ -119,9 +229,9 @@ dc.barChart = function (parent, chartGroup) {
             .attr("width", _barWidth)
             .attr("height", function (d) {
                 return barHeight(d);
-            })
-            .attr("fill", dc.pluck('data',_chart.getColor))
-            .select("title").text(dc.pluck('data',_chart.title(d.name)));
+            });
+//            .attr("fill", dc.pluck('data',_chart.getColor))
+//            .select("title").text(dc.pluck('data',_chart.title(d.name)));
 
         dc.transition(bars.exit(), _chart.transitionDuration())
             .attr("height", 0)

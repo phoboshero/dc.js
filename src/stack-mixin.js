@@ -64,7 +64,7 @@ dc.stackMixin = function (_chart) {
     ```
 
     **/
-    _chart.stack = function (group, name, accessor) {
+    _chart.stack = function (group, name, accessor, layerOptions) {
         if (!arguments.length) return _stack;
 
         if (arguments.length <= 2)
@@ -73,16 +73,17 @@ dc.stackMixin = function (_chart) {
         var layer = {group:group};
         if (typeof name === 'string') layer.name = name;
         if (typeof accessor === 'function') layer.accessor = accessor;
+        layer.options = layerOptions || {};
         _stack.push(layer);
 
         return _chart;
     };
 
-    dc.override(_chart,'group', function (g,n,f) {
+    dc.override(_chart,'group', function (g,n,f, layerOptions) {
         if (!arguments.length) return _chart._group();
         _stack = [];
         _titles = {};
-        _chart.stack(g,n);
+        _chart.stack(g,n,f, layerOptions);
         if (f) _chart.valueAccessor(f);
         return _chart._group(g,n);
     });
@@ -228,7 +229,15 @@ dc.stackMixin = function (_chart) {
 
     _chart.legendables = function () {
         return _stack.map(function (layer, i) {
-            return {chart:_chart, name:layer.name, hidden: layer.hidden || false, color:_chart.getColor.call(layer,layer.values,i)};
+            var legendObj = {
+                chart:_chart,
+                name:layer.name,
+                hidden: layer.hidden || false,
+                color:_chart.getColor.call(layer,layer.values,i)
+            };
+            legendObj.color = layer.options.color ? layer.options.color
+                : _chart.getColor.call(layer,layer.values,i);
+            return legendObj;
         });
     };
 
